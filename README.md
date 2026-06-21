@@ -23,7 +23,6 @@ It fuses **XDP** (eXpress Data Path) interception via **Rust/Aya** at the NIC dr
 
 ---
 
-```markdown
 ## 🧬 Architecture Overview
 
 ```mermaid
@@ -65,7 +64,6 @@ graph TD
     style P fill:#4cd137,stroke:#44bd32,stroke-width:1px,color:#fff
     style R fill:#eccc68,stroke:#ffa502,stroke-width:1px,color:#000
 ```
-
 ---
 
 ## ⚡ Core Engineering Features
