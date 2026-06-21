@@ -1,51 +1,43 @@
 # 🛡️ AI-IDA: Next-Generation AI-Powered Linux Kernel Firewall
 
-[![Kernel Architecture](https://img.shields.io/badge/Kernel-XDP%2FeBPF-orange?style=for-the-badge)]()
-[![Core Language](https://img.shields.io/badge/Driver-Rust%20%28Aya%29-red?style=for-the-badge)]()
-[![Control Plane](https://img.shields.io/badge/Control%20Plane-Go-blue?style=for-the-badge)]()
-[![ML Optimization](https://img.shields.io/badge/Inference-Pure%20Go%20%28if%2Felse%29-brightgreen?style=for-the-badge)]()
+```
+    +-----------------------------------------------------------+
+    |                    PACKET INGRESS (NIC)                   |
+    +-----------------------------------------------------------+
+                                  |
+                                  v
+    +-----------------------------------------------------------+
+    | [KERNEL SPACE] - Rust / XDP Driver Layer                  |
+    |                                                           |
+    |   1. Fast Port Filter & Token Bucket Rate Limiter         |
+    |   2. Lookup Static Maps (reputation_map / signature_map)  |
+    |      ├── MATCH -> XDP_DROP (Nanoseconds)                  |
+    |      └── MISS  -> XDP_PASS                                |
+    +-----------------------------------------------------------+
+              |                                       ^
+    (Ring Buffer: 24B Meta)                 (eBPF Map Updates)
+              v                                       |
+    +-----------------------------------------------------------+
+    | [USER SPACE] - Go Runtime Control Plane                   |
+    |                                                           |
+    |   ├── 1. High-Speed Ring Buffer Consumer                  |
+    |   ├── 2. Flow Aggregator & IAT (Time-Window Variant)      |
+    |   └── 3. Concurrent Inference Engine (Worker Pool)        |
+    |            │                                              |
+    |            ▼ Compiled ML Model (Pure Go if/else)          |
+    |          [Anomaly Detected (Probability > 0.85)]          |
+    |            │                                              |
+    |            ▼ Dynamic Feature Pattern Mining               |
+    |          [Extract Structural Attack Signature]            |
+    +-----------------------------------------------------------+
+```
 
 AI-IDA (Intelligent Defense Architecture) is an ultra-high-performance, programmable Linux kernel firewall subsystem designed to mitigate volumetric and structural cyberattacks (such as DDoS and advanced network scans) at the line rate. 
 
 By leveraging **XDP (eXpress Data Path)** via **Rust (Aya)** at the network driver level and a non-blocking **Go control plane** driven by a compiled machine learning pipeline, AI-IDA drops malicious traffic in **nanoseconds**, keeping host system resources (even on low-tier CPUs like Intel Core i3) completely untouched.
 
----
-
-## 🏛️ Architectural Blueprint
-
-The core engineering philosophy of AI-IDA is **"Decouple Computation from the Data Path."** Traditional firewalls degrade under high packets-per-second (PPS) due to context switching and `sk_buff` allocation overhead in the Linux network stack. AI-IDA bypasses this entirely using an asynchronous, three-tier architecture:
-+-----------------------------------------------------------+
-|                    PACKET INGRESS (NIC)                   |
-+-----------------------------------------------------------+
-                              |
-                              v
-+-----------------------------------------------------------+
-| [KERNEL SPACE] - Rust / XDP Driver Layer                  |
-|                                                           |
-|   1. Fast Port Filter & Token Bucket Rate Limiter         |
-|   2. Lookup Static Maps (reputation_map / signature_map)  |
-|      ├── MATCH -> XDP_DROP (Nanoseconds)                  |
-|      └── MISS  -> XDP_PASS                                |
-+-----------------------------------------------------------+
-          |                                       ^
-(Ring Buffer: 24B Meta)                 (eBPF Map Updates)
-          v                                       |
-+-----------------------------------------------------------+
-| [USER SPACE] - Go Runtime Control Plane                   |
-|                                                           |
-|   ├── 1. High-Speed Ring Buffer Consumer                  |
-|   ├── 2. Flow Aggregator & IAT (Time-Window Variant)      |
-|   └── 3. Concurrent Inference Engine (Worker Pool)        |
-|            │                                              |
-|            ▼ Compiled ML Model (Pure Go if/else)          |
-|          [Anomaly Detected (Probability > 0.85)]          |
-|            │                                              |
-|            ▼ Dynamic Feature Pattern Mining               |
-|          [Extract Structural Attack Signature]            |
-+-----------------------------------------------------------+
-
-
----
+> [!NOTE]
+> **Core Engineering Philosophy:** Decouple Computation from the Data Path. Traditional firewalls degrade under high packets-per-second (PPS) due to context switching and `sk_buff` allocation overhead in the Linux network stack. AI-IDA bypasses this entirely using an asynchronous, three-tier architecture.
 
 ## ⚡ Core Engineering Features
 
@@ -62,24 +54,29 @@ The core engineering philosophy of AI-IDA is **"Decouple Computation from the Da
 * **Zero Runtime Overhead Optimization:** Models are trained offline using gradient-boosted decision trees (**LightGBM**) on standard intrusion datasets (CIC-IDS) and compiled directly into native Go `if/else` conditional primitives via customized parsing pipelines.
 * **Microsecond Execution Boundaries:** Eliminates the Python runtime/interpreter from the production environment, reducing floating-point model inference cost down to a few CPU cycles.
 
----
-
 ## 🔬 Mathematical Feature Engineering & Attack Vector Mitigation
 
 Instead of classifying individual packets, AI-IDA evaluates a dynamic **Time-Window Flow Aggregator** (e.g., 100ms intervals). This enables the firewall to neutralize complex botnets utilizing IP rotation or spoofing.
 
 ### Feature Matrix Formulae
-* **Packet Inter-Arrival Time Standard Deviation ($IAT_{std}$):**
-  $$\sigma = \sqrt{\frac{1}{N}\sum_{i=1}^{N}(t_i - \mu)^2}$$
-  *Human traffic exhibits natural high variance ($IAT_{std} > 50\text{ms}$), whereas automated script/botnet engines emit tight, mechanical microsecond patterns ($\sigma \approx 0$).*
-  
-* **Asymmetric Flow Density ($Ratio_{flow}$):**
-  $$Ratio_{flow} = \frac{\text{Packets}_{Inbound}}{\text{Packets}_{Outbound}}$$
-  *Measures TCP handshake state compliance. Volumetric floods show structural divergence ($Ratio_{flow} \gg 100$).*
 
-* **Shannon Entropy of Destination Ports ($Entropy_{port}$):**
-  $$H(P) = -\sum_{i=1}^{n} P(p_i) \log_2 P(p_i)$$
-  *Standard client sessions target limited endpoints (low entropy). Horizontal scanning triggers a rapid geometric spike in spatial port entropy.*
+**Packet Inter-Arrival Time Standard Deviation ($IAT_{std}$):**
+
+$$\sigma = \sqrt{\frac{1}{N}\sum_{i=1}^{N}(t_i - \mu)^2}$$
+
+> [!TIP]
+> Human traffic exhibits natural high variance ($IAT_{std} > 50\text{ms}$), whereas automated script/botnet engines emit tight, mechanical microsecond patterns ($\sigma \approx 0$).
+
+**Asymmetric Flow Density ($Ratio_{flow}$):**
+
+$$Ratio_{flow} = \frac{\text{Packets}_{Inbound}}{\text{Packets}_{Outbound}}$$
+
+> [!TIP]
+> Measures TCP handshake state compliance. Volumetric floods show structural divergence ($Ratio_{flow} \gg 100$).
+
+**Shannon Entropy of Destination Ports ($Entropy_{port}$):**
+
+$$H(P) = -\sum_{i=1}^{n} P(p_i) \log_2 P(p_i)$$
 
 ### Production Mitigation Vectors
 
@@ -88,8 +85,6 @@ Instead of classifying individual packets, AI-IDA evaluates a dynamic **Time-Win
 | **SYN Flood / Botnets** | Asymmetric ingress $Ratio_{flow}$ + Fixed TCP Windows | Dynamic identification matching -> `signature_map` injection |
 | **TCP Port Scanning** | Sharp expansion of $Entropy_{port}$ on local IP | Offending source IP blocked globally via `reputation_map` |
 | **DNS/NTP Amplification** | Sudden surge in $Payload_{mean}$ originating from port 53/123 | Adaptive structural match on IP Packet Identification parameters |
-
----
 
 ## 🛠️ System Roadmap & Current Implementation Milestones
 
@@ -108,14 +103,8 @@ Instead of classifying individual packets, AI-IDA evaluates a dynamic **Time-Win
 - [ ] Implement the `m2cgen` code generation pipe translating tree nodes into native Go logic blocks.
 - [ ] Deploy the automated pattern extraction routine to convert User-Space AI insights into precise kernel-level eBPF signature constraints.
 
----
-
-## ⚡ Performance Verification Target
-
-AI-IDA is architected to perform optimally under severe enterprise networking constraints:
-* **Max Processing Latency (Kernel Space Match):** $< 10$ nanoseconds.
-* **Max Control Plane Feedback Loop (Detection to Block):** $< 10$ milliseconds.
-* **Target Line-Rate Capacity:** 10 Gbps (14.8 Million Packets Per Second) on standard modern networking cards (NIC) driven by budget processor layouts.
+> [!WARNING]
+> **Performance Verification Target:** AI-IDA is architected to perform optimally under severe enterprise networking constraints. Maximum Processing Latency (Kernel Space Match) must remain $< 10$ nanoseconds, and Target Line-Rate Capacity must scale up to 10 Gbps (14.8 Million Packets Per Second) on budget processor layouts like Intel Core i3.
 
 ---
 *Developed as a high-performance network security research project focused on the convergence of low-level kernel subsystems and real-time behavioral artificial intelligence.*
