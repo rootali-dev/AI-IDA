@@ -1,5 +1,13 @@
 # 🛡️ AI-IDA: Next-Generation AI-Powered Linux Kernel Firewall
 
+[![Kernel Architecture](https://img.shields.io/badge/Kernel-XDP%2FeBPF-orange?style=for-the-badge)]()
+[![Core Language](https://img.shields.io/badge/Driver-Rust%20%28Aya%29-red?style=for-the-badge)]()
+[![Control Plane](https://img.shields.io/badge/Control%20Plane-Go-blue?style=for-the-badge)]()
+[![ML Optimization](https://img.shields.io/badge/Inference-Pure%20Go%20%28if%2Felse%29-brightgreen?style=for-the-badge)]()
+
+AI-IDA (Intelligent Defense Architecture) is an ultra-high-performance, programmable Linux kernel firewall subsystem designed to mitigate volumetric and structural cyberattacks (such as DDoS and advanced network scans) at the line rate. 
+
+By leveraging **XDP (eXpress Data Path)** via **Rust (Aya)** at the network driver level and a non-blocking **Go control plane** driven by a compiled machine learning pipeline, AI-IDA drops malicious traffic in **nanoseconds**, keeping host system resources (even on low-tier CPUs like Intel Core i3) completely untouched.
 ```
     +-----------------------------------------------------------+
     |                    PACKET INGRESS (NIC)                   |
