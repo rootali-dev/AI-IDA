@@ -23,79 +23,48 @@ It fuses **XDP** (eXpress Data Path) interception via **Rust/Aya** at the NIC dr
 
 ---
 
+```markdown
 ## 🧬 Architecture Overview
-+-------------------------------------------------------------+
 
-|                    PACKET INGRESS (NIC)                     |
+```mermaid
+graph TD
+    NIC["🏁 PACKET INGRESS (NIC)"]
+    
+    subgraph KernelSpace["🔹 KERNEL SPACE (Rust / XDP Driver Layer - Aya)"]
+        LP["1. Token-Bucket Rate Limiter (PERCPU_HASH)"]
+        PG["2. Static L4 Port Gate (O(1) Lookup)"]
+        RM["3. Reputation & Signature Match (LPM_TRIE)"]
+        
+        LP --> PG --> RM
+        
+        RM -->|MATCH| D["❌ XDP_DROP / XDP_TX (Reflective RST)"]
+        RM -->|MISS| P["✅ XDP_PASS (To Network Stack)"]
+        RM -->|DISTRIBUTE| R["🔀 XDP_REDIRECT (RSS-aware steering)"]
+    end
 
-+-------------------------------------------------------------+
+    subgraph UserSpace["🔸 USER SPACE (Go Runtime Control Plane)"]
+        BC["1. Lockless Ring Buffer Consumer (Zero-copy)"]
+        FA["2. Flow Aggregator (Time-Window 100ms IAT)"]
+        IE["3. Concurrent Inference Engine (Worker Pool)"]
+        ML{"Compiled ML Model <br> P(malicious) > 0.85"}
+        SE["4. Structural Pattern Extraction & Signature Synthesis"]
+        
+        BC --> FA --> IE --> ML
+        ML -->|True| SE
+    end
 
-|
+    NIC --> LP
+    P -->|Lockless Ring Buffer: 24B Metadata| BC
+    SE -->|eBPF Map Updates| RM
 
-v
-
-+-------------------------------------------------------------+
-
-| [KERNEL SPACE] - Rust / XDP Driver Layer (Aya)               |
-
-|                                                               |
-
-|  1. Token-Bucket Rate Limiter    (BPF_MAP_TYPE_PERCPU_HASH)  |
-
-|  2. Static L4 Port Gate          (O(1) lookup)               |
-
-|  3. Reputation / Signature Match (BPF_MAP_TYPE_LPM_TRIE)     |
-
-|       |-- MATCH    -> XDP_DROP / XDP_TX (reflective RST)     |
-
-|       |-- MISS     -> XDP_PASS                               |
-
-|       `-- DISTRIBUTE -> XDP_REDIRECT (RSS-aware steering)    |
-
-+-------------------------------------------------------------+
-
-|                                            ^
-
-(Lockless Ring Buffer: 24B Metadata)      (eBPF Map Update)
-
-v                                            |
-
-+-------------------------------------------------------------+
-
-| [USER SPACE] - Go Runtime Control Plane                      |
-
-|                                                               |
-
-|  1. Lockless Ring Buffer Consumer  (zero-copy reads)         |
-
-|  2. Flow Aggregator - Time-Window IAT Variant (100ms)        |
-
-|  3. Concurrent Inference Engine    (Goroutine Worker Pool)   |
-
-|        |                                                     |
-
-|        v   Compiled ML Model (pure Go if/else, via m2cgen)   |
-
-|      [Anomaly Detected -> P(malicious) > 0.85]                |
-
-|        |                                                     |
-
-|        v   Structural Pattern Extraction                     |
-
-|      [Signature synthesized -> pushed to reputation_map]      |
-
-+-------------------------------------------------------------+
-
----
-
-## 🗺️ Memory Map Architecture
-
-AI-IDA rejects naive global hash maps to avoid lock contention under concurrent multi-core packet processing:
-
-| Map Type | Purpose | Concurrency Model |
-|---|---|---|
-| `BPF_MAP_TYPE_PERCPU_HASH` | Per-flow token-bucket rate limiting | Independent per-core state, zero cross-core lock contention |
-| `BPF_MAP_TYPE_LPM_TRIE` | Subnet/ASN binary reputation enforcement | Longest-prefix-match, sub-linear lookup, RCU-safe map updates |
+    %% Styling
+    style NIC fill:#2f3640,stroke:#f5f6fa,stroke-width:2px,color:#fff
+    style KernelSpace fill:#1e272e,stroke:#34e7e4,stroke-width:2px,color:#fff
+    style UserSpace fill:#1e272e,stroke:#ffdd59,stroke-width:2px,color:#fff
+    style D fill:#eb4d4b,stroke:#ff7675,stroke-width:1px,color:#fff
+    style P fill:#4cd137,stroke:#44bd32,stroke-width:1px,color:#fff
+    style R fill:#eccc68,stroke:#ffa502,stroke-width:1px,color:#000
+```
 
 ---
 
