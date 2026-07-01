@@ -1,0 +1,6 @@
+[build]
+target = "bpfel-unknown-none"
+
+[target.bpfel-unknown-none]
+linker = "bpf-linker"
+rustflags = ["-C", "link-arg=-z", "-C", "link-arg=notailcalls"]

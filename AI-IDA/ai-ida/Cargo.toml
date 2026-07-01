@@ -1,0 +1,3 @@
+[workspace]
+members = ["ai-ida-ebpf", "xdp-loader"]
+resolver = "2"

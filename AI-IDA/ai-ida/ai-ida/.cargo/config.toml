@@ -1,0 +1,7 @@
+[build]
+target = "bpfel-unknown-none"
+
+[target.bpfel-unknown-none]
+linker = "bpf-linker"
+# Disable tail calls to ensure BPF-to-BPF function calls (if added later) are inlined or verified correctly
+rustflags = ["-C", "link-arg=-z", "-C", "link-arg=notailcalls"]
